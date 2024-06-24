@@ -257,7 +257,7 @@ def incomingServer_main(host, port, run_event):
                 sock = None
                 try:
                     conn = ChatterboxConnection(conn)
-                    conn.sendall("+OK server ready")
+                    conn.sendall(b"+OK server ready")
                     while run_event.is_set():
                         data = conn.recvall()
                         logging.debug("Answering %s" % data)
@@ -265,7 +265,7 @@ def incomingServer_main(host, port, run_event):
                         try:
                             cmd = dispatch[command]
                         except KeyError:
-                            conn.sendall("-ERR unknown command")
+                            conn.sendall(b"-ERR unknown command")
                         else:
                             conn.sendall(cmd(data))
                             if cmd is handleQuit:
@@ -275,7 +275,7 @@ def incomingServer_main(host, port, run_event):
 
     except (SystemExit, KeyboardInterrupt):
       pass
-    except Exception, ex:
+    except Exception as ex:
       raise
     finally:
         if sock is not None:

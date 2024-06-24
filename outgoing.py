@@ -5,14 +5,14 @@ import bminterface
 import logging
 
 class outgoingServer(SMTPServer):
-    def process_message(self, peer, mailfrom, rcpttos, data):
+    def process_message(self, peer, mailfrom, rcpttos, data, mail_options=[], rcpt_options=[]):
         parser = email.parser.FeedParser()
-        parser.feed(data)
+        parser.feed(data.decode("utf-8", "replace"))
         msg = parser.close()
 
         toAddress = msg['To']
         fromAddress = msg['From']
-        subject = u' '.join(unicode(t[0], t[1] or 'UTF-8') for t in email.header.decode_header(msg['Subject'])).encode('UTF-8')
+        subject = ' '.join(t[0] for t in email.header.decode_header(msg['Subject']))
         body = self._bmformat(msg)
         
         #Make sure we don't send an actually blank subject or body--this can cause problems.

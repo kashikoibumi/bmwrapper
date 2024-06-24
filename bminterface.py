@@ -1,11 +1,12 @@
-import ConfigParser
-import xmlrpclib
+from six.moves import configparser
+from six.moves import xmlrpc_client
 import json
 import datetime
 import time
 import email.utils
 import os
 import logging
+from codecs import encode
 
 purgeList = []
 allMessages = []
@@ -17,7 +18,7 @@ def _getKeyLocation():  #make this not suck later
 def _getConfig(keys):
     return apiData()
     #TODO make this work, so the above can be removed
-    config = ConfigParser.SafeConfigParser()
+    config = configparser.SafeConfigParser()
     config.read(keys)
     try:
       api_port = config.getint('bitmessagesettings', 'apiport')
@@ -30,7 +31,7 @@ def _getConfig(keys):
     return "http://"+api_uname+":"+api_passwd+"@"+api_iface+":"+str(api_port)+"/"
 
 def _makeApi(keys):
-    return xmlrpclib.ServerProxy(_getConfig(keys))
+    return xmlrpc_client.ServerProxy(_getConfig(keys))
     
 def _sendMessage(toAddress, fromAddress, subject, body):
     api = _makeApi(_getKeyLocation())
@@ -73,8 +74,8 @@ def registerAddress(address):
 def send(toAddress, fromAddress, subject, body):
     toAddress = _stripAddress(toAddress)
     fromAddress = _stripAddress(fromAddress)
-    subject = subject.encode('base64')
-    body = body.encode('base64')
+    subject = encode(subject.encode("utf-8", "replace"), 'base64').decode("utf-8", "replace")
+    body = encode(body.encode("utf-8", "replace"), 'base64').decode("utf-8", "replace")
     if toAddress == 'broadcast':
       return _sendBroadcast(fromAddress, subject, body)
     else:
@@ -170,7 +171,7 @@ def lookupAppdataFolder(): #gets the appropriate folders for the .dat files depe
 def apiData():
     global keysPath
     
-    config = ConfigParser.SafeConfigParser()
+    config = configparser.SafeConfigParser()
     keysPath = 'keys.dat'
     config.read(keysPath) #First try to load the config file (the keys.dat file) from the program directory
 
@@ -181,30 +182,30 @@ def apiData():
         #Could not load the keys.dat file in the program directory. Perhaps it is in the appdata directory.
         appDataFolder = lookupAppdataFolder()
         keysPath = appDataFolder + 'keys.dat'
-        config = ConfigParser.SafeConfigParser()
+        config = configparser.SafeConfigParser()
         config.read(keysPath)
 
         try:
             config.get('bitmessagesettings','settingsversion')
         except:
             #keys.dat was not there either, something is wrong.
-            print ' '
-            print '******************************************************************'
-            print 'There was a problem trying to access the Bitmessage keys.dat file.'
-            print 'Make sure that daemon is in the same directory as Bitmessage.'
-            print '******************************************************************'
-            print ' '
-            print config
-            print ' '
+            print(' ')
+            print('******************************************************************')
+            print('There was a problem trying to access the Bitmessage keys.dat file.')
+            print('Make sure that daemon is in the same directory as Bitmessage.')
+            print('******************************************************************')
+            print(' ')
+            print(config)
+            print(' ')
 
     try:
         apiConfigured = config.getboolean('bitmessagesettings','apienabled') #Look for 'apienabled'
         apiEnabled = apiConfigured
     except:
         apiConfigured = False #If not found, set to false since it still needs to be configured
-        print "You need to edit your keys.dat file and enable bitmessage's API"
-        print "See for more details: https://bitmessage.org/wiki/API"
-        print "Will now crash..."
+        print("You need to edit your keys.dat file and enable bitmessage's API")
+        print("See for more details: https://bitmessage.org/wiki/API")
+        print("Will now crash...")
         raise
 
     #if (apiConfigured == False):#If the apienabled == false or is not present in the keys.dat file, notify the user and set it up
