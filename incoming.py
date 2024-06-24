@@ -11,7 +11,7 @@ import logging
 
 
 class ChatterboxConnection(object):
-    END = "\r\n"
+    END = b"\r\n"
     def __init__(self, conn):
       self.conn = conn
     def __getattr__(self, name):
@@ -33,23 +33,23 @@ class ChatterboxConnection(object):
             data[-2] = pair[:pair.index(END)]
             data.pop()
             break
-      return "".join(data)
+      return b"".join(data)
 
 
 def handleUser(data):
     d = data.split()
     logging.debug("data:%s" % d)
     username = d[-1]
-    if username[:3] == 'BM-':
+    if username[:3] == b'BM-':
         logging.debug("Only showing messages for %s" % username)
         bminterface.registerAddress(username)
     else:
         logging.debug("Showing all messages in the inbox")
         bminterface.registerAddress(None)
-    return "+OK user accepted"
+    return b"+OK user accepted"
 
 def handlePass(data):
-    return "+OK pass accepted"
+    return b"+OK pass accepted"
 
 def _getMsgSizes():
     msgCount = bminterface.listMsgs()
@@ -66,7 +66,7 @@ def handleStat(data):
     msgSizeTotal = 0
     for msgSize in msgSizes:
       msgSizeTotal += msgSize
-    returnData = '+OK %i %i' % (msgCount, msgSizeTotal)
+    returnData = b'+OK %i %i' % (msgCount, msgSizeTotal)
     logging.debug("Answering STAT: %i %i" % (msgCount, msgSizeTotal))
     return returnData
 
@@ -79,26 +79,26 @@ def handleList(data):
         # means the server wants a single message response
         i = int(msgId) - 1
         if i >= len(msgSizes):
-            return "-ERR no such message"
+            return b"-ERR no such message"
         else:
             msgSize = msgSizes[i]
-            return "+OK %s %s" % (msgId, msgSize)
+            return b"+OK %i %i" % (msgId, msgSize)
     msgCount = 0
-    returnDataPart2 = ''
+    returnDataPart2 = b''
     msgSizeTotal = 0
     for msgSize in msgSizes:
       msgSizeTotal += msgSize
       msgCount += 1
-      returnDataPart2 += '%i %i\r\n' % (msgCount, msgSize)
-    returnDataPart2 += '.'
-    returnDataPart1 = '+OK %i messages (%i octets)\r\n' % (msgCount, msgSizeTotal)
+      returnDataPart2 += b'%i %i\r\n' % (msgCount, msgSize)
+    returnDataPart2 += b'.'
+    returnDataPart1 = b'+OK %i messages (%i octets)\r\n' % (msgCount, msgSizeTotal)
     returnData = returnDataPart1 + returnDataPart2
     logging.debug("Answering LIST: %i %i" % (msgCount, msgSizeTotal))
     logging.debug(returnData)
     return returnData
 
 def handleTop(data):
-    msg = 'test'
+    msg = b'test'
     logging.debug(data.split())
     cmd, msgID, lines = data.split()
     msgID = int(msgID)-1
@@ -107,34 +107,37 @@ def handleTop(data):
     dateTime, toAddress, fromAddress, subject, body = bminterface.get(msgID)
     logging.debug(subject)
     msg = makeEmail(dateTime, toAddress, fromAddress, subject, body)
-    top, bot = msg.split("\n\n", 1)
-    #text = top + "\r\n\r\n" + "\r\n".join(bot[:lines])
-    return "+OK top of message follows\r\n%s\r\n." % top
+    top, bot = msg.split(b"\n\n", 1)
+    #text = top + b"\r\n\r\n" + b"\r\n".join(bot[:lines])
+    return b"+OK top of message follows\r\n%s\r\n." % top
 
 def handleRetr(data):
     logging.debug(data.split())
     msgID = int(data.split()[1])-1
+    msgCount = bminterface.listMsgs()
+    if msgID >= msgCount:
+        return b"-ERR no such message"
     dateTime, toAddress, fromAddress, subject, body = bminterface.get(msgID)
     msg = makeEmail(dateTime, toAddress, fromAddress, subject, body)
-    return "+OK %i octets\r\n%s\r\n." % (len(msg), msg)
+    return b"+OK %i octets\r\n%b\r\n." % (len(msg), msg.encode("utf-8", "replace"))
 
 def handleDele(data):
     msgID = int(data.split()[1])-1
     bminterface.markForDelete(msgID)
-    return "+OK I'll try..."
+    return b"+OK I'll try..."
 
 def handleNoop(data):
-    return "+OK"
+    return b"+OK"
 
 def handleQuit(data):
     bminterface.cleanup()
-    return "+OK just pretend I'm gone"
+    return b"+OK just pretend I'm gone"
 
 def handleCapa(data):
-    returnData = "+OK List of capabilities follows\r\n"
+    returnData = b"+OK List of capabilities follows\r\n"
     for k in dispatch:
-        returnData += "%s\r\n" % k
-    returnData += "."
+        returnData += b"%b\r\n" % k.encode("utf-8", "replace")
+    returnData += b"."
     return returnData
 
 def handleUIDL(data):
@@ -143,14 +146,14 @@ def handleUIDL(data):
     if len(data) == 1:
       refdata = bminterface.getUIDLforAll()
       logging.debug(refdata)
-      returnData = '+OK\r\n'
+      returnData = b'+OK\r\n'
       for msgID, d in enumerate(refdata):
-        returnData += "%s %s\r\n" % (msgID+1, d)
-      returnData += '.'
+        returnData += b"%i %b\r\n" % (msgID+1, d.encode("utf-8", "replace"))
+      returnData += b'.'
     else:
       refdata = bminterface.getUIDLforSingle(int(data[1])-1)
       logging.debug(refdata)
-      returnData = '+OK ' + data[0] + str(refdata[0])
+      returnData = b'+OK ' + data[0] + refdata[0]
     return returnData
     
 def makeEmail(dateTime, toAddress, fromAddress, subject, body):
@@ -198,16 +201,16 @@ def makeEmail(dateTime, toAddress, fromAddress, subject, body):
     
 def parseBody(body):
     returnData = []
-    text = ''
-    searchString = '<img[^>]*'
+    text = b''
+    searchString = b'<img[^>]*'
     attachment = re.search(searchString, body)
     while attachment:
       imageCode = body[attachment.start():attachment.end()]
-      imageDataRange = re.search('src=[\"\'][^\"\']*[\"\']', imageCode)
+      imageDataRange = re.search(b'src=[\"\'][^\"\']*[\"\']', imageCode)
       imageData=''
       if imageDataRange:
         try:
-          imageData = imageCode[imageDataRange.start()+5:imageDataRange.end()-1].lstrip('data:')
+          imageData = imageCode[imageDataRange.start()+5:imageDataRange.end()-1].lstrip(b'data:')
         except:
           pass
       if imageData:
@@ -261,7 +264,7 @@ def incomingServer_main(host, port, run_event):
                     while run_event.is_set():
                         data = conn.recvall()
                         logging.debug("Answering %s" % data)
-                        command = data.split(None, 1)[0]
+                        command = data.split(None, 1)[0].decode("utf-8", "replace")
                         try:
                             cmd = dispatch[command]
                         except KeyError:

@@ -1,12 +1,11 @@
 from six.moves import configparser
 from six.moves import xmlrpc_client
-import json
 import datetime
 import time
 import email.utils
 import os
 import logging
-from codecs import encode
+from codecs import encode, decode
 
 purgeList = []
 allMessages = []
@@ -86,12 +85,13 @@ def _getAll():
     global currentAddress
     if not allMessages:
       api = _makeApi(_getKeyLocation())
-      allMessages = json.loads(api.getAllInboxMessages())
+      allMessages = api.getAllInboxMessages()
     logging.debug("current address is %s" % currentAddress)
     if currentAddress is not None:
         ret = []
+        cur_addr = currentAddress.decode("utf-8", "replace")
         for msg in allMessages['inboxMessages']:
-            if msg['toAddress'] == currentAddress:
+            if msg['toAddress'] == cur_addr:
                 ret.append(msg)
         return dict(inboxMessages=ret)
     return allMessages
@@ -106,8 +106,8 @@ def get(msgID):
     #if 'Broadcast' in toAddress:
     #  toAddress = fromAddress
 
-    subject = inboxMessages['inboxMessages'][msgID]['subject'].decode('base64')
-    body = inboxMessages['inboxMessages'][msgID]['message'].decode('base64')
+    subject = decode(inboxMessages['inboxMessages'][msgID]['subject'].encode("utf-8", "replace"), 'base64')
+    body = decode(inboxMessages['inboxMessages'][msgID]['message'].encode("utf-8", "replace"), 'base64')
     return dateTime, toAddress, fromAddress, subject, body
     
 def listMsgs():
@@ -136,7 +136,7 @@ def _deleteMessage(msgRef):
     
 def getUIDLforAll():
     api = _makeApi(_getKeyLocation())
-    inboxMessages = json.loads(api.getAllInboxMessages())
+    inboxMessages = api.getAllInboxMessages()
     refdata = []
     for msgID in range(len(inboxMessages['inboxMessages'])):
       msgRef = inboxMessages['inboxMessages'][msgID]['msgid'] #gets the message Ref via the message index number
@@ -145,7 +145,7 @@ def getUIDLforAll():
     
 def getUIDLforSingle(msgID):
     api = _makeApi(_getKeyLocation())
-    inboxMessages = json.loads(api.getAllInboxMessages())
+    inboxMessages = api.getAllInboxMessages()
     msgRef = inboxMessages['inboxMessages'][msgID]['msgid'] #gets the message Ref via the message index number
     return [str(msgRef)]
 
