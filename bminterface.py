@@ -136,7 +136,7 @@ def _deleteMessage(msgRef):
     
 def getUIDLforAll():
     api = _makeApi(_getKeyLocation())
-    inboxMessages = api.getAllInboxMessages()
+    inboxMessages = _getAll()
     refdata = []
     for msgID in range(len(inboxMessages['inboxMessages'])):
       msgRef = inboxMessages['inboxMessages'][msgID]['msgid'] #gets the message Ref via the message index number
@@ -145,7 +145,7 @@ def getUIDLforAll():
     
 def getUIDLforSingle(msgID):
     api = _makeApi(_getKeyLocation())
-    inboxMessages = api.getAllInboxMessages()
+    inboxMessages = _getAll()
     msgRef = inboxMessages['inboxMessages'][msgID]['msgid'] #gets the message Ref via the message index number
     return [str(msgRef)]
 
