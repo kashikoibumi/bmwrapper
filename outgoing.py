@@ -49,7 +49,7 @@ class outgoingServer(SMTPServer):
         if 'text/plain' in item['Content-Type']:
           text += item.get_payload()
         elif 'image' in item['Content-Type']:
-          [filetype, name] = item['Content-Type'].rstrip().split('\n')
+          filetype, name = item['Content-Type'].rstrip().split(' ')
           name = name.replace('name', 'alt')
           imageraw = item.get_payload().rstrip().split('\n')
           imagedata = ''
