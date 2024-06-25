@@ -7,6 +7,11 @@ import os
 import logging
 from codecs import encode, decode
 
+try:
+    SafeConfigParser = configparser.SafeConfigParser
+except AttributeError:
+    SafeConfigParser = configparser.ConfigParser
+
 purgeList = []
 allMessages = []
 currentAddress = None
@@ -17,7 +22,7 @@ def _getKeyLocation():  #make this not suck later
 def _getConfig(keys):
     return apiData()
     #TODO make this work, so the above can be removed
-    config = configparser.SafeConfigParser()
+    config = SafeConfigParser()
     config.read(keys)
     try:
       api_port = config.getint('bitmessagesettings', 'apiport')
@@ -171,7 +176,7 @@ def lookupAppdataFolder(): #gets the appropriate folders for the .dat files depe
 def apiData():
     global keysPath
     
-    config = configparser.SafeConfigParser()
+    config = SafeConfigParser()
     keysPath = 'keys.dat'
     config.read(keysPath) #First try to load the config file (the keys.dat file) from the program directory
 
@@ -182,7 +187,7 @@ def apiData():
         #Could not load the keys.dat file in the program directory. Perhaps it is in the appdata directory.
         appDataFolder = lookupAppdataFolder()
         keysPath = appDataFolder + 'keys.dat'
-        config = configparser.SafeConfigParser()
+        config = SafeConfigParser()
         config.read(keysPath)
 
         try:
